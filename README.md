@@ -14,7 +14,7 @@ A web application that visualizes Git-based wiki content as interactive mind map
 
 ### Prerequisites
 
-- .NET 8.0 SDK or later
+- .NET 10.0 SDK or later
 - Git repository with markdown files
 
 ### Installation
