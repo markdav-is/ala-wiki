@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ala Wiki - Mind Maps</title>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            font-size: 1.1em;
+            opacity: 0.9;
+        }
+
+        .controls {
+            padding: 30px;
+            background: #f8f9fa;
+            border-bottom: 2px solid #e9ecef;
+        }
+
+        .control-group {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        label {
+            font-weight: 600;
+            color: #495057;
+        }
+
+        select, button {
+            padding: 12px 20px;
+            border: 2px solid #dee2e6;
+            border-radius: 8px;
+            font-size: 16px;
+            background: white;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        select {
+            flex: 1;
+            min-width: 200px;
+        }
+
+        button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            font-weight: 600;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .content {
+            padding: 30px;
+        }
+
+        #mindmap {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            min-height: 500px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .loading {
+            text-align: center;
+            color: #6c757d;
+            font-size: 1.2em;
+        }
+
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+
+        .info-box {
+            background: #d1ecf1;
+            color: #0c5460;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+
+        .mermaid {
+            display: flex;
+            justify-content: center;
+        }
+
+        @media (max-width: 768px) {
+            .control-group {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            
+            select, button {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🗺️ Ala Wiki Mind Maps</h1>
+            <p>Visualize your Git-based wiki as interactive mind maps</p>
+        </div>
+
+        <div class="controls">
+            <div class="control-group">
+                <label for="fileSelect">Select Wiki File:</label>
+                <select id="fileSelect">
+                    <option value="">Loading files...</option>
+                </select>
+                <button id="loadBtn" onclick="loadMindMap()">Load Mind Map</button>
+                <button id="loadAllBtn" onclick="loadCompleteMindMap()">Load All Files</button>
+            </div>
+        </div>
+
+        <div class="content">
+            <div id="error" class="error" style="display: none;"></div>
+            <div id="info" class="info-box">
+                <strong>Getting Started:</strong>
+                <ol style="margin-top: 10px; margin-left: 20px;">
+                    <li>Configure your Git repository path in appsettings.json</li>
+                    <li>Select a markdown file from the dropdown</li>
+                    <li>Click "Load Mind Map" to visualize the heading hierarchy</li>
+                    <li>Or click "Load All Files" to see all wiki pages in one view</li>
+                </ol>
+            </div>
+            <div id="mindmap">
+                <div class="loading">Select a file and click "Load Mind Map" to get started</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        mermaid.initialize({ 
+            startOnLoad: true,
+            theme: 'default',
+            themeVariables: {
+                primaryColor: '#667eea',
+                primaryTextColor: '#fff',
+                primaryBorderColor: '#5568d3',
+                lineColor: '#764ba2',
+                secondaryColor: '#764ba2',
+                tertiaryColor: '#f8f9fa'
+            }
+        });
+
+        let files = [];
+
+        async function loadFiles() {
+            try {
+                const response = await fetch('/api/wiki/files');
+                if (!response.ok) {
+                    throw new Error('Failed to load files');
+                }
+                
+                files = await response.json();
+                const select = document.getElementById('fileSelect');
+                select.innerHTML = '<option value="">-- Select a file --</option>';
+                
+                if (files.length === 0) {
+                    select.innerHTML = '<option value="">No markdown files found</option>';
+                    showInfo('No markdown files found in the repository. Please add some .md files to your wiki.');
+                } else {
+                    files.forEach(file => {
+                        const option = document.createElement('option');
+                        option.value = file.path;
+                        option.textContent = file.path;
+                        select.appendChild(option);
+                    });
+                }
+            } catch (error) {
+                showError('Error loading files: ' + error.message);
+            }
+        }
+
+        async function loadMindMap() {
+            const select = document.getElementById('fileSelect');
+            const filePath = select.value;
+            
+            if (!filePath) {
+                showError('Please select a file');
+                return;
+            }
+
+            hideError();
+            hideInfo();
+            showLoading();
+
+            try {
+                const response = await fetch('/api/mindmap/' + encodeURIComponent(filePath));
+                if (!response.ok) {
+                    throw new Error('Failed to load mind map');
+                }
+                
+                const mindMap = await response.json();
+                renderMindMap(mindMap);
+            } catch (error) {
+                showError('Error loading mind map: ' + error.message);
+            }
+        }
+
+        async function loadCompleteMindMap() {
+            hideError();
+            hideInfo();
+            showLoading();
+
+            try {
+                const response = await fetch('/api/mindmap');
+                if (!response.ok) {
+                    throw new Error('Failed to load complete mind map');
+                }
+                
+                const mindMap = await response.json();
+                renderMindMap(mindMap);
+            } catch (error) {
+                showError('Error loading complete mind map: ' + error.message);
+            }
+        }
+
+        function renderMindMap(node) {
+            const mermaidCode = generateMermaidCode(node);
+            const mindmapDiv = document.getElementById('mindmap');
+            mindmapDiv.innerHTML = '<div class="mermaid">' + mermaidCode + '</div>';
+            mermaid.init(undefined, document.querySelectorAll('.mermaid'));
+        }
+
+        function generateMermaidCode(node) {
+            let code = 'mindmap\n';
+            code += '  root((' + escapeForMermaid(node.title) + '))\n';
+            
+            function addChildren(parent, depth = 2) {
+                if (!parent.children || parent.children.length === 0) return;
+                
+                parent.children.forEach(child => {
+                    const indent = '  '.repeat(depth);
+                    code += indent + escapeForMermaid(child.title) + '\n';
+                    if (child.children && child.children.length > 0) {
+                        addChildren(child, depth + 1);
+                    }
+                });
+            }
+            
+            addChildren(node);
+            return code;
+        }
+
+        function escapeForMermaid(text) {
+            // Remove or escape special characters that might break Mermaid
+            return text.replace(/[()[\]{}]/g, '').trim();
+        }
+
+        function showLoading() {
+            const mindmapDiv = document.getElementById('mindmap');
+            mindmapDiv.innerHTML = '<div class="loading">Loading mind map...</div>';
+        }
+
+        function showError(message) {
+            const errorDiv = document.getElementById('error');
+            errorDiv.textContent = message;
+            errorDiv.style.display = 'block';
+        }
+
+        function hideError() {
+            const errorDiv = document.getElementById('error');
+            errorDiv.style.display = 'none';
+        }
+
+        function showInfo(message) {
+            const infoDiv = document.getElementById('info');
+            infoDiv.innerHTML = '<strong>Info:</strong> ' + message;
+            infoDiv.style.display = 'block';
+        }
+
+        function hideInfo() {
+            const infoDiv = document.getElementById('info');
+            infoDiv.style.display = 'none';
+        }
+
+        // Load files on page load
+        loadFiles();
+    </script>
+</body>
+</html>

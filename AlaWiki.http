@@ -1,0 +1,25 @@
+@AlaWiki_HostAddress = http://localhost:5000
+
+### List all wiki files
+GET {{AlaWiki_HostAddress}}/api/wiki/files
+Accept: application/json
+
+###
+
+### Get complete mind map
+GET {{AlaWiki_HostAddress}}/api/mindmap
+Accept: application/json
+
+###
+
+### Get specific file content
+GET {{AlaWiki_HostAddress}}/api/wiki/files/Home.md
+Accept: application/json
+
+###
+
+### Get mind map for specific file
+GET {{AlaWiki_HostAddress}}/api/mindmap/Home.md
+Accept: application/json
+
+###
