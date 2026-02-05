@@ -1,0 +1,6 @@
+@AlaWiki_HostAddress = http://localhost:5051
+
+GET {{AlaWiki_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
